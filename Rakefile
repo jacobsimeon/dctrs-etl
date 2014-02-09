@@ -1,9 +1,25 @@
 CSV_DOWNLOAD_PAGE_URL = "http://nppes.viva-it.com/NPI_Files.html"
-require 'nokogiri'
-require 'open-uri'
-require 'pp'
+
+TMP_ROOT = File.expand_path("../tmp", __FILE__)
+DATA_ROOT = File.expand_path("../data", __FILE__)
+
+ZIP_FILE_NAME = 'npi_data.zip'
+CSV_FILE_NAME = 'npi_data.csv'
+HEADER_FILE_NAME = 'npi_data_header.csv'
+
+ZIP_SOURCE = File.join TMP_ROOT, ZIP_FILE_NAME
+CSV_SOURCE = File.join TMP_ROOT, CSV_FILE_NAME
+HEADER_SOURCE = File.join TMP_ROOT, HEADER_FILE_NAME
+
+CSV_DESTINATION = File.join DATA_ROOT, CSV_FILE_NAME
+HEADER_DESTINATION = File.join DATA_ROOT, HEADER_FILE_NAME
+
+SAMPLE_SIZE = 100000
 
 def find_monthly_url
+  require 'nokogiri'
+  require 'open-uri'
+
   doc = Nokogiri::HTML(open(CSV_DOWNLOAD_PAGE_URL))
   link = doc.css("a").find do |link|
     link.text[/\ANPPES Data Dissemination \(.*\)\Z/]
@@ -12,39 +28,39 @@ def find_monthly_url
   link.attributes['href'].value
 end
 
-namespace :data do
+namespace :extract do
   task :clean do
-    `rm -rf data`
+    system "rm -rf #{DATA_ROOT}"
+    system "mkdir #{DATA_ROOT}"
   end
 
   task :download do
-    `mkdir data`
-    `curl #{find_monthly_url} > data/npi_data.zip`
+    system "mkdir -p #{TMP_ROOT}"
+    system "curl #{find_monthly_url} > #{ZIP_SOURCE}"
   end
 
   task :unzip do
-    `7za -o./data x data/npi_data.zip`
+    system "7za -o#{TMP_ROOT} x #{ZIP_SOURCE}"
   end
 
   task :sanitize do
-    `rm data/*.pdf`
-    `rm -rf data/complete`
-    `mkdir data/complete`
+    system "rm #{TMP_ROOT}/*.pdf"
 
-    csv_files = Dir['data/*.csv']
+    csv_files = Dir["#{TMP_ROOT}/*.csv"]
     header_file = csv_files.find { |f| f[/Header/] }
     main_file = csv_files.find { |f| !f[/Header/] }
 
-    `mv #{header_file} data/complete/npi_data_header.csv`
-    `mv #{main_file} data/complete/npi_data.csv`
+    system "mv #{header_file} #{HEADER_SOURCE}"
+    system "mv #{main_file} #{CSV_SOURCE}"
   end
 
-  task :sample do
-    `rm -rf data/sample`
-    `mkdir data/sample`
-    `head -n 100000 data/complete/npi_data.csv > data/sample/npi_data.csv`
-    `cp data/complete/npi_data_header.csv data/sample/npi_data_header.csv`
+  task sample: :clean do
+    system "head -n #{SAMPLE_SIZE} #{CSV_SOURCE} > #{CSV_DESTINATION}"
+    system "cp #{HEADER_SOURCE} #{HEADER_DESTINATION}"
   end
 
-  task rebuild: %i(clean download unzip sanitize sample)
+  task all: :clean do
+    system "cp #{CSV_SOOURCE} #{CSV_DESTINATION}"
+    system "cp #{HEADER_SOURCE} #{HEADER_DESTINATION}"
+  end
 end
