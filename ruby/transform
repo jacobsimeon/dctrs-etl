@@ -1,16 +1,20 @@
+#!/usr/bin/env ruby
+
 require 'csv'
 require 'json'
 require 'thread/pool'
 
 class TransformDctr
-  THREAD_COUNT = ENV["THREAD_COUNT"].to_i
+  THREAD_COUNT = 25
 
-  def initialize(input_file_name, output_file_name)
-    @input_file_name, @output_file_name = input_file_name, output_file_name
+  attr_accessor :in, :out
+
+  def initialize(_in, _out)
+    @in, @out = _in, _out
   end
 
   def transform
-    input_file.each_line do |line|
+    self.in.each_line do |line|
       pool.process { process_line(line) }
     end
 
@@ -22,27 +26,13 @@ class TransformDctr
     @pool ||= Thread.pool(THREAD_COUNT)
   end
 
-  def output_file
-    @output_file ||= File.open(@output_file_name, 'a')
-  end
-
-  def input_file
-    @input_file ||= File.open(@input_file_name, 'r')
-  end
-
   def process_line(line)
     dctr = Dctr.new(line)
-    output_file << "#{dctr.meta}\n#{dctr.json}\n"
+    self.out << "#{dctr.meta}\n#{dctr.json}\n"
   end
 
   def close
     pool.shutdown
-
-    input_file.close
-    @input_file = nil
-
-    output_file.close
-    @output_file = nil
   end
 end
 
@@ -67,3 +57,5 @@ class Dctr
     @json ||= { npi: @csv[0] }.to_json
   end
 end
+
+TransformDctr.new(ARGF, $stdout).transform

@@ -16,7 +16,8 @@ HEADER_DESTINATION = File.join DATA_ROOT, HEADER_FILE_NAME
 
 SAMPLE_SIZE = 100_000
 
-PROCESSES = 12
+PROCESSES = 8
+
 DATA_FILE_LENGTH = `wc -l #{CSV_DESTINATION}`.split[0].to_i
 
 FILE_CHUNK_SIZE = begin
@@ -26,6 +27,11 @@ FILE_CHUNK_SIZE = begin
                       DATA_FILE_LENGTH / (PROCESSES - 1)
                     end
                   end
+
+# TRANSFORM_COMMAND = "./ruby/transform"
+TRANSFORM_COMMAND = ENV["TRANSFORM_COMMAND"] || "./js/transform"
+
+ES_URL = ENV["ES_URL"] || "http://localhost:9200"
 
 def find_monthly_url
   require 'nokogiri'
@@ -71,44 +77,12 @@ namespace :extract do
   end
 
   task all: :clean do
-    system "cp #{CSV_SOOURCE} #{CSV_DESTINATION}"
+    system "cp #{CSV_SOURCE} #{CSV_DESTINATION}"
     system "cp #{HEADER_SOURCE} #{HEADER_DESTINATION}"
   end
 end
 
 namespace :transform do
-  task :test do
-    powers = [1, 2, 4, 8, 16, 32, 64, 128, 256]
-
-    powers.each do |processes|
-      powers.each do |threads|
-        # clean
-        system "rm -rf output"
-        system "mkdir output"
-
-        system "rm -rf tmp/npi_data"
-        system "mkdir tmp/npi_data"
-
-        # build files
-        file_chunk_size = if DATA_FILE_LENGTH % processes == 0
-                            DATA_FILE_LENGTH / processes
-                          else
-                            DATA_FILE_LENGTH / (processes - 1)
-                          end
-
-        system "split -a 1 -l #{file_chunk_size} #{CSV_DESTINATION} tmp/npi_data/npi_data_"
-
-        # run test
-        puts "Processes: #{processes}, Threads: #{threads}"
-
-        10.times do |test_number|
-          STDOUT << "Test ##{test_number}: "
-          system "THREAD_COUNT=#{threads} time bundle exec rake transform:transform"
-        end
-      end
-    end
-  end
-
   task :clean do
     `rm -rf output`
     `mkdir output`
@@ -121,19 +95,19 @@ namespace :transform do
   end
 
   task :transform do
-    require "./transform.rb"
-
-    Dir["./tmp/npi_data/*"].map do |file_name|
-      bare_name = file_name.split("/").last
-      input_file_name = file_name
+    Dir["./tmp/npi_data/*"].each do |input_file_name|
+      bare_name = input_file_name.split("/").last
       output_file_name = "output/#{bare_name}.json"
 
-      fork do
-        transformer = TransformDctr.new(input_file_name, output_file_name)
-        transformer.transform
-      end
+      Process.spawn "#{TRANSFORM_COMMAND} < #{input_file_name} > #{output_file_name}"
     end
 
     Process.waitall
+  end
+end
+
+task :load do
+  Dir["./output/*"].each do |import_file_name|
+    system "curl -s -XPOST #{ES_URL}/_bulk --upload-file - < #{import_file_name}"
   end
 end

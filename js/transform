@@ -1,0 +1,12 @@
+#!/usr/bin/env node
+
+dctrs = require('./lib/transform.js')
+
+process.stdin.resume();
+
+transformer = new dctrs.TransformDctrs(
+  process.stdin, 
+  process.stdout
+);
+
+transformer.transform();
