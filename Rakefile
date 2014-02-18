@@ -1,58 +1,67 @@
 CSV_DOWNLOAD_PAGE_URL = "http://nppes.viva-it.com/NPI_Files.html"
 
-TMP_ROOT = File.expand_path("../tmp", __FILE__)
-DATA_ROOT = File.expand_path("../data", __FILE__)
+ROOT                  = File.expand_path("../", __FILE__)
 
-ZIP_FILE_NAME = 'npi_data.zip'
-CSV_FILE_NAME = 'npi_data.csv'
-HEADER_FILE_NAME = 'npi_data_header.csv'
+TMP_ROOT              = File.join(ROOT, "tmp")
+DATA_ROOT             = File.join(ROOT, "data")
+OUT_DIR               = File.join(ROOT, "out")
 
-ZIP_SOURCE = File.join TMP_ROOT, ZIP_FILE_NAME
-CSV_SOURCE = File.join TMP_ROOT, CSV_FILE_NAME
-HEADER_SOURCE = File.join TMP_ROOT, HEADER_FILE_NAME
+ZIP_FILE_NAME         = 'npi_data.zip'
+CSV_FILE_NAME         = 'npi_data.csv'
+HEADER_FILE_NAME      = 'npi_data_header.csv'
 
-CSV_DESTINATION = File.join DATA_ROOT, CSV_FILE_NAME
-HEADER_DESTINATION = File.join DATA_ROOT, HEADER_FILE_NAME
+ZIP_SOURCE            = File.join TMP_ROOT, ZIP_FILE_NAME
+CSV_SOURCE            = File.join TMP_ROOT, CSV_FILE_NAME
+HEADER_SOURCE         = File.join TMP_ROOT, HEADER_FILE_NAME
 
-SAMPLE_SIZE = 100_000
+CSV_DESTINATION       = File.join DATA_ROOT, CSV_FILE_NAME
+HEADER_DESTINATION    = File.join DATA_ROOT, HEADER_FILE_NAME
 
-PROCESSES = 8
+SAMPLE_SIZE           = 50_000
 
-DATA_FILE_LENGTH = `wc -l #{CSV_DESTINATION}`.split[0].to_i
+DATA_FILE_LENGTH      = `wc -l #{CSV_DESTINATION}`.split[0].to_i
 
-FILE_CHUNK_SIZE = begin
-                    if DATA_FILE_LENGTH % PROCESSES == 0
-                      DATA_FILE_LENGTH / PROCESSES
-                    else
-                      DATA_FILE_LENGTH / (PROCESSES - 1)
-                    end
-                  end
+PROCESSES             = 8
+FILE_CHUNK_DEST       = File.join(TMP_ROOT, "npi_data")
+FILE_CHUNK_PREFIX     = File.join(FILE_CHUNK_DEST, "npi_data_")
 
-# TRANSFORM_COMMAND = "./ruby/transform"
-TRANSFORM_COMMAND = ENV["TRANSFORM_COMMAND"] || "./js/transform"
+FILE_CHUNK_SIZE       = if DATA_FILE_LENGTH % PROCESSES == 0
+                          DATA_FILE_LENGTH / PROCESSES
+                        else
+                          DATA_FILE_LENGTH / (PROCESSES - 1)
+                        end
 
-ES_URL = ENV["ES_URL"] || "http://localhost:9200"
+TRANSFORM_COMMAND     = "./bin/transform"
+
+ES_URL                = "https://p85r5xdj:rdpoxxikk9s0357e@oak-7316449.us-east-1.bonsai.io/"
+# ES_URL              = "http://localhost:9200"
+ES_INDEX_NAME         = "dctrs"
+
 
 def find_monthly_url
   require 'nokogiri'
   require 'open-uri'
 
   doc = Nokogiri::HTML(open(CSV_DOWNLOAD_PAGE_URL))
-  link = doc.css("a").find do |link|
-    link.text[/\ANPPES Data Dissemination \(.*\)\Z/]
+  link = doc.css("a").find do |_link|
+    _link.text[/\ANPPES Data Dissemination \(.*\)\Z/]
   end
 
   link.attributes['href'].value
 end
 
+
 namespace :extract do
+
   task :clean do
     system "rm -rf #{DATA_ROOT}"
     system "mkdir #{DATA_ROOT}"
   end
 
   task :download do
-    system "mkdir -p #{TMP_ROOT}"
+    system "rm -rf #{TMP_ROOT}"
+    system "mkdir #{TMP_ROOT}"
+
     system "curl #{find_monthly_url} > #{ZIP_SOURCE}"
   end
 
@@ -80,34 +89,59 @@ namespace :extract do
     system "cp #{CSV_SOURCE} #{CSV_DESTINATION}"
     system "cp #{HEADER_SOURCE} #{HEADER_DESTINATION}"
   end
+
 end
 
 namespace :transform do
+
   task :clean do
-    `rm -rf output`
-    `mkdir output`
+    system "rm -rf #{OUT_DIR}"
+    system "mkdir #{OUT_DIR}"
   end
 
   task :build_files do
-    system "rm -rf tmp/npi_data"
-    system "mkdir tmp/npi_data"
-    system "split -a 1 -l #{FILE_CHUNK_SIZE} #{CSV_DESTINATION} tmp/npi_data/npi_data_"
+    system "rm -rf #{FILE_CHUNK_DEST}"
+    system "mkdir #{FILE_CHUNK_DEST}"
+
+    system "split -a 2 -l #{FILE_CHUNK_SIZE} #{CSV_DESTINATION} #{FILE_CHUNK_PREFIX}"
   end
 
   task :transform do
-    Dir["./tmp/npi_data/*"].each do |input_file_name|
-      bare_name = input_file_name.split("/").last
-      output_file_name = "output/#{bare_name}.json"
+    Dir[File.join(FILE_CHUNK_DEST, "*")].each do |input_file_name|
+      bare_name = File.barename(input_file_name)
+      output_file_name = File.join(OUT_DIR, "#{bare_name}.json")
 
+      puts "Transforming #{input_file_name} to #{output_file_name}"
       Process.spawn "#{TRANSFORM_COMMAND} < #{input_file_name} > #{output_file_name}"
     end
 
+    puts "Transform processes started, waiting for them to finish."
     Process.waitall
   end
+
 end
 
-task :load do
-  Dir["./output/*"].each do |import_file_name|
-    system "curl -s -XPOST #{ES_URL}/_bulk --upload-file - < #{import_file_name}"
+namespace :load do
+
+  task :load do
+    system "mkdir -p #{LOG_ROOT}"
+
+    Dir[File.join(OUT_DIR, "*")].each do |import_file_name|
+      bare_name = File.barename(input_file_name)
+
+      puts "Importing #{import_file_name}"
+      cmd = "curl -s -XPOST #{ES_URL}/_bulk --upload-file - < #{import_file_name} > log/#{bare_name}.log.json"
+      system cmd
+    end
   end
+
+  task :clean do
+    system "curl -XDELETE #{ES_URL}/#{INDEX_NAME}"
+    system "curl -XPOST #{ES_URL}/#{INDEX_NAME}"
+  end
+
+  task :count do
+    system "curl -XGET #{ES_URL}/#{INDEX_NAME}/_count"
+  end
+
 end
