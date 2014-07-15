@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+require 'json'
+require 'pp'
+
+taxonomies_file_path = File.expand_path("../../data/taxonomies.json", __FILE__)
+taxonomies = JSON.parse(File.read(taxonomies_file_path))
+
+pp taxonomies[ARGV[0]]

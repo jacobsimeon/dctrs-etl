@@ -1,5 +1,5 @@
 Csv = require "csv"
-Dctr = require "dctr"
+Dctr = require "./dctr"
 
 class TransformDctrs
   constructor: (@in, @out) ->

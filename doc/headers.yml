@@ -7,13 +7,16 @@
 1: Entity Type Code
 2: Replacement NPI
 3: Employer Identification Number (EIN)
+
 4: Provider Organization Name (Legal Business Name)
+
 5: Provider Last Name (Legal Name)
 6: Provider First Name
 7: Provider Middle Name
 8: Provider Name Prefix Text
 9: Provider Name Suffix Text
 10: Provider Credential Text
+
 11: Provider Other Organization Name
 12: Provider Other Organization Name Type Code
 13: Provider Other Last Name
@@ -23,6 +26,7 @@
 17: Provider Other Name Suffix Text
 18: Provider Other Credential Text
 19: Provider Other Last Name Type Code
+
 20: Provider First Line Business Mailing Address
 21: Provider Second Line Business Mailing Address
 22: Provider Business Mailing Address City Name
@@ -31,6 +35,7 @@
 25: Provider Business Mailing Address Country Code (If outside U.S.)
 26: Provider Business Mailing Address Telephone Number
 27: Provider Business Mailing Address Fax Number
+
 28: Provider First Line Business Practice Location Address
 29: Provider Second Line Business Practice Location Address
 30: Provider Business Practice Location Address City Name
@@ -39,33 +44,42 @@
 33: Provider Business Practice Location Address Country Code (If outside U.S.)
 34: Provider Business Practice Location Address Telephone Number
 35: Provider Business Practice Location Address Fax Number
+
 36: Provider Enumeration Date
 37: Last Update Date
+
 38: NPI Deactivation Reason Code
 39: NPI Deactivation Date
 40: NPI Reactivation Date
+
 41: Provider Gender Code
+
 42: Authorized Official Last Name
 43: Authorized Official First Name
 44: Authorized Official Middle Name
 45: Authorized Official Title or Position
 46: Authorized Official Telephone Number
+
 47: Healthcare Provider Taxonomy Code_1
 48: Provider License Number_1
 49: Provider License Number State Code_1
 50: Healthcare Provider Primary Taxonomy Switch_1
+
 51: Healthcare Provider Taxonomy Code_2
 52: Provider License Number_2
 53: Provider License Number State Code_2
 54: Healthcare Provider Primary Taxonomy Switch_2
+
 55: Healthcare Provider Taxonomy Code_3
 56: Provider License Number_3
 57: Provider License Number State Code_3
 58: Healthcare Provider Primary Taxonomy Switch_3
+
 59: Healthcare Provider Taxonomy Code_4
 60: Provider License Number_4
 61: Provider License Number State Code_4
 62: Healthcare Provider Primary Taxonomy Switch_4
+
 63: Healthcare Provider Taxonomy Code_5
 64: Provider License Number_5
 65: Provider License Number State Code_5
@@ -106,10 +120,12 @@
 100: Provider License Number_14
 101: Provider License Number State Code_14
 102: Healthcare Provider Primary Taxonomy Switch_14
+
 103: Healthcare Provider Taxonomy Code_15
 104: Provider License Number_15
 105: Provider License Number State Code_15
 106: Healthcare Provider Primary Taxonomy Switch_15
+
 107: Other Provider Identifier_1
 108: Other Provider Identifier Type Code_1
 109: Other Provider Identifier State_1
@@ -310,13 +326,16 @@
 304: Other Provider Identifier Type Code_50
 305: Other Provider Identifier State_50
 306: Other Provider Identifier Issuer_50
+
 307: Is Sole Proprietor
 308: Is Organization Subpart
 309: Parent Organization LBN
 310: Parent Organization TIN
+
 311: Authorized Official Name Prefix Text
 312: Authorized Official Name Suffix Text
 313: Authorized Official Credential Text
+
 314: Healthcare Provider Taxonomy Group_1
 315: Healthcare Provider Taxonomy Group_2
 316: Healthcare Provider Taxonomy Group_3
